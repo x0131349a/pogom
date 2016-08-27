@@ -12,5 +12,9 @@ config = {
     ],
     'ROOT_PATH': None,
     'CONFIG_PATH': None,
-    'SIGNATURE_LIB_PATH': None
+    'SIGNATURE_LIB_PATH': None,
+    'FB_VERIFICATION_CODE': 'FBVCODE',
+    'FB_TOKEN': 'FBPTOKEN',
+    'FB_SUBSCRIBERS': None
+
 }

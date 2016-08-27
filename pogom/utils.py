@@ -36,14 +36,21 @@ def get_args():
 def get_pokemon_name(pokemon_id):
     return get_locale()[str(pokemon_id)]
 
+
+def get_pokemon_id(pokemon_name):
+    if not hasattr(get_pokemon_id, 'inv'):
+        get_pokemon_id.inv = {v: k for k, v in get_locale().iteritems()}
+    return get_pokemon_id.inv.get(unicode(pokemon_name), None)
+
+
 def get_locale():
-    if (not hasattr(get_locale, 'names')
-            or config['LOCALE'] != get_locale.locale):
+    if (not hasattr(get_locale, 'names') or
+       config['LOCALE'] != get_locale.locale):
         get_locale.locale = config['LOCALE']
         file_path = os.path.join(
-                config['ROOT_PATH'],
-                config['LOCALES_DIR'],
-                'pokemon.{}.json'.format(config['LOCALE']))
+            config['ROOT_PATH'],
+            config['LOCALES_DIR'],
+            'pokemon.{}.json'.format(config['LOCALE']))
         with open(file_path, 'r') as f:
             get_locale.names = json.loads(f.read())
 

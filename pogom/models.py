@@ -72,9 +72,9 @@ class Pokemon(BaseModel):
 
         pokemons = list(query)
 
-        known_pokemon = set( p['pokemon_id'] for p in query )
-        unknown_pokemon = set(range(1,151)).difference(known_pokemon)
-        pokemons.extend( { 'pokemon_id': i, 'count': 0 } for i in unknown_pokemon)
+        known_pokemon = set(p['pokemon_id'] for p in query)
+        unknown_pokemon = set(range(1, 151)).difference(known_pokemon)
+        pokemons.extend({'pokemon_id': i, 'count': 0} for i in unknown_pokemon)
 
         for p in pokemons:
             p['pokemon_name'] = get_pokemon_name(p['pokemon_id'])
@@ -97,6 +97,7 @@ class Pokemon(BaseModel):
             p['pokemon_name'] = get_pokemon_name(p['pokemon_id'])
 
         return pokemons
+
 
 class Pokestop(BaseModel):
     pokestop_id = CharField(primary_key=True)
@@ -145,12 +146,12 @@ def parse_map(map_dict):
                 'latitude': p['latitude'],
                 'longitude': p['longitude'],
                 'disappear_time': datetime.utcfromtimestamp(
-                        (p['last_modified_timestamp_ms'] +
-                         p['time_till_hidden_ms']) / 1000.0)
+                    (p['last_modified_timestamp_ms'] +
+                     p['time_till_hidden_ms']) / 1000.0)
             }
             if p['time_till_hidden_ms'] < 0 or p['time_till_hidden_ms'] > 900000:
                 pokemons[p['encounter_id']]['disappear_time'] = datetime.utcfromtimestamp(
-                        p['last_modified_timestamp_ms']/1000 + 15*60)
+                    p['last_modified_timestamp_ms'] / 1000 + 15 * 60)
 
         for p in cell.get('catchable_pokemons', []):
             if p['encounter_id'] in pokemons:
@@ -165,8 +166,8 @@ def parse_map(map_dict):
                 'latitude': p['latitude'],
                 'longitude': p['longitude'],
                 'disappear_time': datetime.utcfromtimestamp(
-                        (p['last_modified_timestamp_ms'] +
-                         p['time_till_hidden_ms']) / 1000.0)
+                    (p['last_modified_timestamp_ms'] +
+                     p['time_till_hidden_ms']) / 1000.0)
             }
 
         for f in cell.get('forts', []):
@@ -176,7 +177,7 @@ def parse_map(map_dict):
             if f.get('type') == 1:  # Pokestops
                 if 'lure_info' in f:
                     lure_expiration = datetime.utcfromtimestamp(
-                            f['lure_info']['lure_expires_timestamp_ms'] / 1000.0)
+                        f['lure_info']['lure_expires_timestamp_ms'] / 1000.0)
                     active_pokemon_id = f['lure_info']['active_pokemon_id']
                 else:
                     lure_expiration, active_pokemon_id = None, None
@@ -187,7 +188,7 @@ def parse_map(map_dict):
                     'latitude': f['latitude'],
                     'longitude': f['longitude'],
                     'last_modified': datetime.utcfromtimestamp(
-                            f['last_modified_timestamp_ms'] / 1000.0),
+                        f['last_modified_timestamp_ms'] / 1000.0),
                     'lure_expiration': lure_expiration,
                     'active_pokemon_id': active_pokemon_id
                 }
@@ -202,7 +203,7 @@ def parse_map(map_dict):
                     'latitude': f['latitude'],
                     'longitude': f['longitude'],
                     'last_modified': datetime.utcfromtimestamp(
-                            f['last_modified_timestamp_ms'] / 1000.0),
+                        f['last_modified_timestamp_ms'] / 1000.0),
                 }
 
     with db.atomic() and lock:

@@ -70,7 +70,7 @@ class Pogom(Flask):
             return resp
 
     def heatmap_data(self):
-        return jsonify( Pokemon.get_heat_stats() )
+        return jsonify(Pokemon.get_heat_stats())
 
     def get_config_site(self):
         if not self.is_authenticated():
@@ -231,8 +231,7 @@ class CustomJSONEncoder(JSONEncoder):
                 if obj.utcoffset() is not None:
                     obj = obj - obj.utcoffset()
                 millis = int(
-                        calendar.timegm(obj.timetuple()) * 1000 +
-                        obj.microsecond / 1000
+                    calendar.timegm(obj.timetuple()) * 1000 + obj.microsecond / 1000
                 )
                 return millis
             iterable = iter(obj)
