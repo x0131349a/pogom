@@ -8,7 +8,8 @@ config = {
         ('en', 'English'),
         ('fr', 'French'),
         ('de', 'German'),
-        ('zh_cn', 'Simplified Chinese')
+        ('zh_cn', 'Simplified Chinese'),
+        ('zh_tw', 'Taiwan')
     ],
     'ROOT_PATH': None,
     'CONFIG_PATH': None,
