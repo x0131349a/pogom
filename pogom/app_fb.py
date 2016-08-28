@@ -22,6 +22,8 @@ class PogomFb(Pogom):
         # move to model or somewhere
         self._fb_subscribers = config['FB_SUBSCRIBERS'] or {}
         self._fb_noti_history = {}
+        for subscriber in self._fb_subscribers.iterkeys():
+            self._fb_noti_history[subscriber] = {}
 
     def verify(self):
         log.info('')
@@ -52,26 +54,30 @@ class PogomFb(Pogom):
                 fb_send_message(recipient, msg)
 
     def _generate_notify_msg(self, recipient, notify_list, pokemon_list):
+        log.debug(u"finding pm for {0}...".format(notify_list))
         for m in pokemon_list:
             if m["pokemon_id"] not in notify_list:
+                log.debug(u"not finding u:{0} {1}".format(m["pokemon_id"], m["pokemon_name"]))
                 continue
             if m["encounter_id"] not in self._fb_noti_history[recipient]:
+                log.debug(u"eid: {0} {1}".format(m["encounter_id"], m["pokemon_name"]))
                 self._fb_noti_history[recipient][m["encounter_id"]] = m['disappear_time']
                 exp_ctime = "{h}:{m}:{s}".format(
-                    m['disappear_time'].hour, m['disappear_time'].minute,
-                    m['disappear_time'].second)
+                    h=m['disappear_time'].hour, m=m['disappear_time'].minute,
+                    s=m['disappear_time'].second)
                 msg = (
-                    "A wild {pokemon_name} appeared!",
-                    "Disappeared at ({ctime})",
-                    "longitude:{longitude}, latitude:{latitude}"
+                    u"A wild {pokemon_name} appeared!",
+                    u"Disappeared at ({ctime})",
+                    u"longitude:{longitude}, latitude:{latitude}"
                 )
-                msg = "\n".join(msg)
+                msg = u"\n".join(msg)
                 msg = msg.format(
                     pokemon_name=m['pokemon_name'],
                     longitude=m['longitude'],
                     latitude=m['latitude'],
                     ctime=exp_ctime
                 )
+                log.debug(msg)
                 yield msg
 
     def _clear_expired_entries_from_history(self):
@@ -112,7 +118,7 @@ class PogomFb(Pogom):
             if sender_id not in self._fb_subscribers:
                 self._init_subscriber(sender_id)
             pokemon_name = msg.split('tell me about')[1].strip()
-            pokemon_id = get_pokemon_id(pokemon_name)
+            pokemon_id = int(get_pokemon_id(pokemon_name))
             if pokemon_id:
                 if pokemon_id not in self._fb_subscribers[sender_id]:
                     self._subscribe_pokemon(sender_id, pokemon_id)
@@ -120,7 +126,7 @@ class PogomFb(Pogom):
             else:
                 response_msg = u"wat's {0}".format(pokemon_name)
         elif msg.startswith('llist'):
-            response_msg = str(self._fb_subscribers.items())
+            response_msg = str(self._fb_subscribers)
         fb_send_message(sender_id, response_msg)
 
 

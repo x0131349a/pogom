@@ -36,6 +36,7 @@ def read_config(scan_config):
     config['GOOGLEMAPS_KEY'] = c.get('GOOGLEMAPS_KEY', None)
     config['CONFIG_PASSWORD'] = c.get('CONFIG_PASSWORD', None)
     config['ACCOUNTS'] = c.get('ACCOUNTS', [])
+    config['FB_SUBSCRIBERS'] = c.get('FB_SUBSCRIBERS', None)
     scan_config.update_scan_locations(c.get('SCAN_LOCATIONS', {}))
 
     if config.get('CONFIG_PASSWORD', None):
