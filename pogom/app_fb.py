@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 from . import config
 from .app import Pogom
-from .utils import get_pokemon_id, get_pokemon_names
+from .utils import get_pokemon_id, get_pokemon_names, get_pokemon_name
 from flask import request
 from datetime import datetime
 from time import time
@@ -129,24 +129,41 @@ class PogomFb(Pogom):
                 response_msg = "sure bro"
             else:
                 response_msg = u"wat's {0}".format(pokemon_name)
-        elif 'pokedex':
-            response_msg = unicode(get_pokemon_names())
+        elif msg.startswith('pokedex'):
+            response_msg = " ".join(get_pokemon_names())
+        elif msg.startswith('what did i say'):
+            response_msg = " ".join([get_pokemon_name(n) for n in self._fb_subscribers[sender_id]])
         elif msg.startswith('llist'):
             response_msg = str(self._fb_subscribers[sender_id])
         fb_send_message(sender_id, response_msg)
 
 
 def fb_send_message(recipient_id, msg="", img_url=""):
-    msg_request = {
-        "params": {"access_token": config['FB_TOKEN']},
-        "headers": {"Content-Type": "application/json"},
+    def _send():
+        msg_request = {
+            "params": {"access_token": config['FB_TOKEN']},
+            "headers": {"Content-Type": "application/json"},
 
-        "data": json.dumps({
-            "recipient": {"id": recipient_id},
-            "message": {"text": msg} if msg else {'attachment': {'type': 'image', 'payload': {'url': img_url}}}
-        })
-    }
+            "data": json.dumps({
+                "recipient": {"id": recipient_id},
+                "message": {"text": msg_seg} if msg_seg else {'attachment': {'type': 'image', 'payload': {'url': img_url}}}
+            })
+        }
 
-    r = requests.post("https://graph.facebook.com/v2.6/me/messages", **msg_request)
-    if r.status_code != 200:
-        log.debug("send message failed: {0}".format(r.status_code))
+        r = requests.post("https://graph.facebook.com/v2.6/me/messages", **msg_request)
+        if r.status_code != 200:
+            log.debug("send message failed: {0}".format(r.status_code))
+
+    seg_size = 120
+    if len(msg) > seg_size:
+        segs = len(msg) // seg_size
+        i = 0
+        for i in xrange(1, segs + 1):
+            msg_seg = msg[(i - 1) * seg_size:i * seg_size]
+            _send()
+        if len(msg) % seg_size != 0:
+            msg_seg = msg[i * seg_size:]
+            _send()
+    else:
+        msg_seg = msg
+        _send()

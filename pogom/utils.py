@@ -44,7 +44,7 @@ def get_pokemon_id(pokemon_name):
 
 
 def get_pokemon_names():
-    return [unicode(get_pokemon_name(n)) for n in xrange(1, 152)]
+    return [get_pokemon_name(n) for n in xrange(1, 152)]
 
 
 def get_locale():
