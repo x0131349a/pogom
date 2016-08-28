@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 from . import config
 from .app import Pogom
 from .utils import get_pokemon_id
@@ -43,9 +44,10 @@ class PogomFb(Pogom):
                 for event in entry["messaging"]:
                     if "message" not in event:
                         continue
-                    self._message_processor(
-                        event["sender"]["id"],
-                        event["message"]["text"])
+                    if "text" in event["message"]:
+                        self._message_processor(
+                            event["sender"]["id"],
+                            event["message"]["text"])
         return "ok", 200
 
     def notify(self, pokemon_list):
@@ -64,8 +66,8 @@ class PogomFb(Pogom):
                     h=m['disappear_time'].hour, m=m['disappear_time'].minute,
                     s=m['disappear_time'].second)
                 msg = (
-                    u"A wild {pokemon_name} appeared!",
-                    u"Disappeared at {ctime}"
+                    u"野生的 {pokemon_name} 出現了!",
+                    u"消失於: {ctime}"
                 )
                 msg = u"\n".join(msg)
                 msg = msg.format(
@@ -117,10 +119,12 @@ class PogomFb(Pogom):
             response_msg = "how sad but I will..."
         elif 'tell me about' in msg:
             if sender_id not in self._fb_subscribers:
+                log.debug('got new sub from {0}'.format(sender_id))
                 self._init_subscriber(sender_id)
             pokemon_name = msg.split('tell me about')[1].strip()
-            pokemon_id = int(get_pokemon_id(pokemon_name))
+            pokemon_id = get_pokemon_id(pokemon_name)
             if pokemon_id:
+                pokemon_id = int(pokemon_id)
                 if pokemon_id not in self._fb_subscribers[sender_id]:
                     self._subscribe_pokemon(sender_id, pokemon_id)
                 response_msg = "sure bro"
