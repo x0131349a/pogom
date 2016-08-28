@@ -50,40 +50,41 @@ class PogomFb(Pogom):
 
     def notify(self, pokemon_list):
         for recipient, notify_when_found in self._fb_subscribers.iteritems():
-            for msg in self._generate_notify_msg(recipient, notify_when_found, pokemon_list):
+            for msg, map_link in self._generate_notify_msg(recipient, notify_when_found, pokemon_list):
                 fb_send_message(recipient, msg)
+                fb_send_message(recipient, img_url=map_link)
 
     def _generate_notify_msg(self, recipient, notify_list, pokemon_list):
-        log.debug(u"finding pm for {0}...".format(notify_list))
         for m in pokemon_list:
             if m["pokemon_id"] not in notify_list:
-                log.debug(u"not finding u:{0} {1}".format(m["pokemon_id"], m["pokemon_name"]))
                 continue
             if m["encounter_id"] not in self._fb_noti_history[recipient]:
-                log.debug(u"eid: {0} {1}".format(m["encounter_id"], m["pokemon_name"]))
                 self._fb_noti_history[recipient][m["encounter_id"]] = m['disappear_time']
                 exp_ctime = "{h}:{m}:{s}".format(
                     h=m['disappear_time'].hour, m=m['disappear_time'].minute,
                     s=m['disappear_time'].second)
                 msg = (
                     u"A wild {pokemon_name} appeared!",
-                    u"Disappeared at ({ctime})",
-                    u"longitude:{longitude}, latitude:{latitude}"
+                    u"Disappeared at {ctime}"
                 )
                 msg = u"\n".join(msg)
                 msg = msg.format(
                     pokemon_name=m['pokemon_name'],
-                    longitude=m['longitude'],
-                    latitude=m['latitude'],
                     ctime=exp_ctime
                 )
-                log.debug(msg)
-                yield msg
+                yield (
+                    msg,
+                    self._get_map_snippet(longitude=m['longitude'], latitude=m['latitude'])
+                )
 
     def _clear_expired_entries_from_history(self):
         def _get_timestamp(dt):
             return (dt - datetime(1970, 1, 1)).total_seconds()
         pass
+
+    def _get_map_snippet(self, longitude, latitude):
+        map_url = "http://maps.googleapis.com/maps/api/staticmap?center={latitude},{longitude}&zoom=16&scale=1&size=300x300&maptype=roadmap&format=jpg&visual_refresh=true&markers=size:small%7Ccolor:0xff0000%7Clabel:%7C{latitude},{longitude}"
+        return map_url.format(longitude=longitude, latitude=latitude)
 
     def _init_subscriber(self, s_id):
         self._fb_subscribers[s_id] = []
@@ -130,14 +131,14 @@ class PogomFb(Pogom):
         fb_send_message(sender_id, response_msg)
 
 
-def fb_send_message(recipient_id, msg):
+def fb_send_message(recipient_id, msg="", img_url=""):
     msg_request = {
         "params": {"access_token": config['FB_TOKEN']},
         "headers": {"Content-Type": "application/json"},
 
         "data": json.dumps({
             "recipient": {"id": recipient_id},
-            "message": {"text": msg}
+            "message": {"text": msg} if msg else {'attachment': {'type': 'image', 'payload': {'url': img_url}}}
         })
     }
 
