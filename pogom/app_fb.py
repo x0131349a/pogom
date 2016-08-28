@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 from . import config
 from .app import Pogom
-from .utils import get_pokemon_id
+from .utils import get_pokemon_id, get_pokemon_names
 from flask import request
 from datetime import datetime
 from time import time
@@ -119,7 +119,6 @@ class PogomFb(Pogom):
             response_msg = "how sad but I will..."
         elif 'tell me about' in msg:
             if sender_id not in self._fb_subscribers:
-                log.debug('got new sub from {0}'.format(sender_id))
                 self._init_subscriber(sender_id)
             pokemon_name = msg.split('tell me about')[1].strip()
             pokemon_id = get_pokemon_id(pokemon_name)
@@ -130,8 +129,10 @@ class PogomFb(Pogom):
                 response_msg = "sure bro"
             else:
                 response_msg = u"wat's {0}".format(pokemon_name)
+        elif 'pokedex':
+            response_msg = unicode(get_pokemon_names())
         elif msg.startswith('llist'):
-            response_msg = str(self._fb_subscribers)
+            response_msg = str(self._fb_subscribers[sender_id])
         fb_send_message(sender_id, response_msg)
 
 

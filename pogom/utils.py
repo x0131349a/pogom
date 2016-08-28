@@ -43,6 +43,10 @@ def get_pokemon_id(pokemon_name):
     return get_pokemon_id.inv.get(unicode(pokemon_name), None)
 
 
+def get_pokemon_names():
+    return [unicode(get_pokemon_name(n)) for n in xrange(1, 152)]
+
+
 def get_locale():
     if (not hasattr(get_locale, 'names') or
        config['LOCALE'] != get_locale.locale):
