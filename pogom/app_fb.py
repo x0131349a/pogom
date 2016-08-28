@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+from __future__ import division
 from . import config
 from .app import Pogom
 from .utils import get_pokemon_id, get_pokemon_names, get_pokemon_name
@@ -53,8 +54,8 @@ class PogomFb(Pogom):
     def notify(self, pokemon_list):
         for recipient, notify_when_found in self._fb_subscribers.iteritems():
             for msg, map_link in self._generate_notify_msg(recipient, notify_when_found, pokemon_list):
-                fb_send_message(recipient, msg)
                 fb_send_message(recipient, img_url=map_link)
+                fb_send_message(recipient, msg)
 
     def _generate_notify_msg(self, recipient, notify_list, pokemon_list):
         for m in pokemon_list:
@@ -93,12 +94,32 @@ class PogomFb(Pogom):
         self._fb_noti_history[s_id] = {}
 
     def _subscribe_pokemon(self, s_id, pokemon_id):
-        self._fb_subscribers[s_id].append(pokemon_id)
-        self._save_subscriber()
+        if pokemon_id not in self._fb_subscribers[s_id]:
+            self._fb_subscribers[s_id].append(pokemon_id)
+            self._save_subscriber()
+            return "sure bro"
+        else:
+            return "u said"
 
-    def _unsubscribe(self, s_id):
-        del self._fb_subscribers[s_id]
-        del self._fb_noti_history[s_id]
+    def _unsubscribe_pokemon(self, s_id, pokemon_id):
+        if pokemon_id in self._fb_subscribers[s_id]:
+            self._fb_subscribers[s_id].remove(pokemon_id)
+            self._save_subscriber()
+            return "If this is what you want..."
+        else:
+            return "never heard that!"
+
+    def _get_subscription_list(self, s_id):
+        if s_id in self._fb_subscribers:
+            return " ".join([get_pokemon_name(n) for n in self._fb_subscribers[s_id]])
+        else:
+            return ""
+
+    def _unsubscribe_all(self, s_id):
+        if s_id in self._fb_subscribers:
+            del self._fb_subscribers[s_id]
+        if s_id in self._fb_noti_history[s_id]:
+            del self._fb_noti_history[s_id]
         self._save_subscriber()
 
     def _save_subscriber(self):
@@ -114,26 +135,33 @@ class PogomFb(Pogom):
 
     def _message_processor(self, sender_id, msg):
         response_msg = "QQ more"
-        if 'forget me' in msg and sender_id in self._fb_subscribers:
-            self._unsubscribe(sender_id)
+        if 'forget me' in msg:
+            self._unsubscribe_all(sender_id)
             response_msg = "how sad but I will..."
-        elif 'tell me about' in msg:
+        elif msg.startswith('byebye') or msg.startswith('tell me about'):
             if sender_id not in self._fb_subscribers:
                 self._init_subscriber(sender_id)
-            pokemon_name = msg.split('tell me about')[1].strip()
+            if 'byebye' in msg:
+                splitter = 'byebye'
+                func = self._unsubscribe_pokemon
+            else:
+                splitter = 'tell me about'
+                func = self._subscribe_pokemon
+            pokemon_name = msg.split(splitter)[1].strip()
             pokemon_id = get_pokemon_id(pokemon_name)
             if pokemon_id:
                 pokemon_id = int(pokemon_id)
-                if pokemon_id not in self._fb_subscribers[sender_id]:
-                    self._subscribe_pokemon(sender_id, pokemon_id)
-                response_msg = "sure bro"
+                response_msg = func(sender_id, pokemon_id)
             else:
                 response_msg = u"wat's {0}".format(pokemon_name)
+        elif msg.startswith('what did i say'):
+            response_msg = self._get_subscription_list(sender_id)
+            if not response_msg:
+                response_msg = 'i know nothing about you, tell me more'
         elif msg.startswith('pokedex'):
             response_msg = " ".join(get_pokemon_names())
-        elif msg.startswith('what did i say'):
-            response_msg = " ".join([get_pokemon_name(n) for n in self._fb_subscribers[sender_id]])
         elif msg.startswith('llist'):
+            # for debug
             response_msg = str(self._fb_subscribers[sender_id])
         fb_send_message(sender_id, response_msg)
 
