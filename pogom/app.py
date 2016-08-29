@@ -141,12 +141,14 @@ class Pogom(Flask):
         else:
             config_path = os.path.join(config['ROOT_PATH'], 'config.json')
 
+        data = json.load(open(config_path, 'r'))
         with open(config_path, 'w') as f:
-            data = {'GOOGLEMAPS_KEY': config['GOOGLEMAPS_KEY'],
-                    'LOCALE': config['LOCALE'],
-                    'CONFIG_PASSWORD': config['CONFIG_PASSWORD'],
-                    'SCAN_LOCATIONS': self.scan_config.SCAN_LOCATIONS.values(),
-                    'ACCOUNTS': config['ACCOUNTS']}
+            data.update({
+                'GOOGLEMAPS_KEY': config['GOOGLEMAPS_KEY'],
+                'LOCALE': config['LOCALE'],
+                'CONFIG_PASSWORD': config['CONFIG_PASSWORD'],
+                'SCAN_LOCATIONS': self.scan_config.SCAN_LOCATIONS.values(),
+                'ACCOUNTS': config['ACCOUNTS']})
             f.write(json.dumps(data))
 
     def map_data(self):

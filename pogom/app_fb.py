@@ -71,7 +71,7 @@ class PogomFb(Pogom):
                 disappear_ts = self._get_timestamp(m['disappear_time'])
                 self._fb_noti_history[recipient][m["encounter_id"]] = disappear_ts
                 local_time = datetime.fromtimestamp(disappear_ts, self._timezone)
-                exp_ctime = "{h}:{m}:{s}".format(
+                exp_ctime = "{h:0>2}:{m:0>2}:{s:0>2}".format(
                     h=local_time.hour, m=local_time.minute,
                     s=local_time.second)
                 msg = (
