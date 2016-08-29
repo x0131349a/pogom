@@ -4,6 +4,7 @@ from . import config
 from .app import Pogom
 from .utils import get_pokemon_id, get_pokemon_names, get_pokemon_name
 from flask import request
+from pytz import timezone
 from datetime import datetime
 from time import time
 import logging
@@ -22,6 +23,7 @@ class PogomFb(Pogom):
         self.route('/fb', methods=['POST'])(self.message_handler)
         self.route('/fb', methods=['GET'])(self.verify)
         # move to model or somewhere
+        self._timezone = timezone(config['FB_NOTIFICATION_TIMEZONE'] or 'UTC')
         self._fb_subscribers = config['FB_SUBSCRIBERS'] or {}
         self._fb_noti_history = {}
         for subscriber in self._fb_subscribers.iterkeys():
@@ -57,15 +59,21 @@ class PogomFb(Pogom):
                 fb_send_message(recipient, img_url=map_link)
                 fb_send_message(recipient, msg)
 
+    def _get_timestamp(self, dt):
+        return (dt - datetime(1970, 1, 1)).total_seconds()
+
     def _generate_notify_msg(self, recipient, notify_list, pokemon_list):
         for m in pokemon_list:
             if m["pokemon_id"] not in notify_list:
                 continue
             if m["encounter_id"] not in self._fb_noti_history[recipient]:
-                self._fb_noti_history[recipient][m["encounter_id"]] = m['disappear_time']
+                # normalize time
+                disappear_ts = self._get_timestamp(m['disappear_time'])
+                self._fb_noti_history[recipient][m["encounter_id"]] = disappear_ts
+                local_time = datetime.fromtimestamp(disappear_ts, self._timezone)
                 exp_ctime = "{h}:{m}:{s}".format(
-                    h=m['disappear_time'].hour, m=m['disappear_time'].minute,
-                    s=m['disappear_time'].second)
+                    h=local_time.hour, m=local_time.minute,
+                    s=local_time.second)
                 msg = (
                     u"野生的 {pokemon_name} 出現了!",
                     u"消失於: {ctime}"
@@ -81,8 +89,6 @@ class PogomFb(Pogom):
                 )
 
     def _clear_expired_entries_from_history(self):
-        def _get_timestamp(dt):
-            return (dt - datetime(1970, 1, 1)).total_seconds()
         pass
 
     def _get_map_snippet(self, longitude, latitude):

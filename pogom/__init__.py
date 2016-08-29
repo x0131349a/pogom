@@ -16,6 +16,6 @@ config = {
     'SIGNATURE_LIB_PATH': None,
     'FB_VERIFICATION_CODE': 'FBVCODE',
     'FB_TOKEN': 'FBPTOKEN',
-    'FB_SUBSCRIBERS': None
-
+    'FB_SUBSCRIBERS': None,
+    'FB_NOTIFICATION_TIMEZONE': 'Asia/Taipei'  # pytz formate
 }
