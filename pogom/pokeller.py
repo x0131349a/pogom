@@ -21,4 +21,7 @@ class PokePoller(Thread):
     def run(self):
         while True:
             time.sleep(10)
-            self.notify(Pokemon.get_active())
+            try:
+                self.notify(Pokemon.get_active())
+            except Exception as e:
+                log.debug(e)
