@@ -51,6 +51,13 @@ class PogomFb(Pogom):
                         self._message_processor(
                             event["sender"]["id"],
                             event["message"]["text"])
+                    if "attachments" in event["message"]:
+                        for attachment in event["message"]["attachments"]:
+                            if attachment.get("type") == "location":
+                                coord = attachment["payload"]["coordinates"]
+                                self._location_processor(
+                                    sender_id=event["sender"]["id"],
+                                    lat=coord["lat"], lng=coord["long"])
         return "ok", 200
 
     def notify(self, pokemon_list):
@@ -60,11 +67,13 @@ class PogomFb(Pogom):
                 fb_send_message(recipient, img_url=map_link)
                 fb_send_message(recipient, msg)
 
-    def _add_location(self, lat, lng, radius):
+    def _add_map_location(self, lat, lng, radius):
         if all((lat, lng, radius)):
             self.scan_config.add_scan_location(lat, lng, radius)
-            return True
-        return False
+
+    def _del_map_location(self, lat, lng):
+        if all((lat, lng)):
+            self.scan_config.delete_scan_location(lat, lng)
 
     def _get_timestamp(self, dt):
         return (dt - datetime(1970, 1, 1)).total_seconds()
@@ -132,6 +141,7 @@ class PogomFb(Pogom):
 
     def _unsubscribe_all(self, s_id):
         if s_id in self._fb_subscribers:
+            self._del_subscriber_location[s_id]
             del self._fb_subscribers[s_id]
         if s_id in self._fb_noti_history:
             del self._fb_noti_history[s_id]
@@ -147,6 +157,24 @@ class PogomFb(Pogom):
         data['FB_SUBSCRIBERS'] = self._fb_subscribers
         with open(config_path, 'w') as f:
             f.write(json.dumps(data))
+
+    def _move_subscriber_location(self, s_id, lat, lng):
+        self._del_subscriber_location(s_id)
+        self._add_map_location(lat, lng, 200)
+        self._fb_subscribers[s_id]['recon'] = (lat, lng)
+        self._save_subscriber()
+
+    def _del_subscriber_location(self, s_id):
+        if self._fb_subscribers[s_id]['recon']:
+            prev_lat, prev_lng = self._fb_subscribers[s_id]['recon']
+            self._del_map_location(prev_lat, prev_lng)
+            self._fb_subscribers[s_id]['recon'] = None
+
+    def _location_processor(self, sender_id, lat, lng):
+        if sender_id not in self._fb_subscribers:
+            self._init_subscriber(sender_id)
+        self._move_subscriber_location(sender_id, lat, lng)
+        fb_send_message(sender_id, "delivering ur pizzzaa")
 
     def _message_processor(self, sender_id, msg):
         response_msg = "QQ more"
@@ -173,6 +201,10 @@ class PogomFb(Pogom):
             response_msg = self._get_subscription_list(sender_id)
             if not response_msg:
                 response_msg = 'i know nothing about you, tell me more'
+        elif msg.startswith('cancel my flight'):
+            self._del_subscriber_location(sender_id)
+            self._save_subscriber()
+            response_msg = 'oh...'
         elif msg.startswith('pokedex'):
             response_msg = " ".join(get_pokemon_names())
         elif msg.startswith('llist'):
