@@ -54,10 +54,17 @@ class PogomFb(Pogom):
         return "ok", 200
 
     def notify(self, pokemon_list):
-        for recipient, notify_when_found in self._fb_subscribers.iteritems():
+        for recipient, subscriber_info in self._fb_subscribers.iteritems():
+            notify_when_found = subscriber_info['subscription']
             for msg, map_link in self._generate_notify_msg(recipient, notify_when_found, pokemon_list):
                 fb_send_message(recipient, img_url=map_link)
                 fb_send_message(recipient, msg)
+
+    def _add_location(self, lat, lng, radius):
+        if all((lat, lng, radius)):
+            self.scan_config.add_scan_location(lat, lng, radius)
+            return True
+        return False
 
     def _get_timestamp(self, dt):
         return (dt - datetime(1970, 1, 1)).total_seconds()
@@ -96,20 +103,22 @@ class PogomFb(Pogom):
         return map_url.format(longitude=longitude, latitude=latitude)
 
     def _init_subscriber(self, s_id):
-        self._fb_subscribers[s_id] = []
+        self._fb_subscribers[s_id] = {}
+        self._fb_subscribers[s_id]['subscription'] = []
+        self._fb_subscribers[s_id]['recon'] = None
         self._fb_noti_history[s_id] = {}
 
     def _subscribe_pokemon(self, s_id, pokemon_id):
-        if pokemon_id not in self._fb_subscribers[s_id]:
-            self._fb_subscribers[s_id].append(pokemon_id)
+        if pokemon_id not in self._fb_subscribers[s_id]['subscription']:
+            self._fb_subscribers[s_id]['subscription'].append(pokemon_id)
             self._save_subscriber()
             return "sure bro"
         else:
             return "u said"
 
     def _unsubscribe_pokemon(self, s_id, pokemon_id):
-        if pokemon_id in self._fb_subscribers[s_id]:
-            self._fb_subscribers[s_id].remove(pokemon_id)
+        if pokemon_id in self._fb_subscribers[s_id]['subscription']:
+            self._fb_subscribers[s_id]['subscription'].remove(pokemon_id)
             self._save_subscriber()
             return "If this is what you want..."
         else:
@@ -117,14 +126,14 @@ class PogomFb(Pogom):
 
     def _get_subscription_list(self, s_id):
         if s_id in self._fb_subscribers:
-            return " ".join([get_pokemon_name(n) for n in self._fb_subscribers[s_id]])
+            return " ".join([get_pokemon_name(n) for n in self._fb_subscribers[s_id]['subscription']])
         else:
             return ""
 
     def _unsubscribe_all(self, s_id):
         if s_id in self._fb_subscribers:
             del self._fb_subscribers[s_id]
-        if s_id in self._fb_noti_history[s_id]:
+        if s_id in self._fb_noti_history:
             del self._fb_noti_history[s_id]
         self._save_subscriber()
 
