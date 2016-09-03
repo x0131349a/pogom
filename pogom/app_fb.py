@@ -64,7 +64,12 @@ class PogomFb(Pogom):
         for recipient, subscriber_info in self._fb_subscribers.iteritems():
             notify_when_found = subscriber_info['subscription']
             for msg, map_link in self._generate_notify_msg(recipient, notify_when_found, pokemon_list):
-                fb_send_message(recipient, img_url=map_link)
+                r = requests.get(map_link, stream=True)
+                if r.status_code == 200:
+                    r.raw.decode_content = True
+                    fb_send_message(recipient, img_tuple=('map.jpg', r.raw, 'image/jpeg'))
+                else:
+                    fb_send_message(recipient, img_url=map_link)
                 fb_send_message(recipient, msg)
 
     def _add_map_location(self, lat, lng, radius):
@@ -213,19 +218,29 @@ class PogomFb(Pogom):
         fb_send_message(sender_id, response_msg)
 
 
-def fb_send_message(recipient_id, msg="", img_url=""):
-    def _send():
-        msg_request = {
-            "params": {"access_token": config['FB_TOKEN']},
-            "headers": {"Content-Type": "application/json"},
-
-            "data": json.dumps({
-                "recipient": {"id": recipient_id},
-                "message": {"text": msg_seg} if msg_seg else {'attachment': {'type': 'image', 'payload': {'url': img_url}}}
-            })
+def fb_send_message(recipient_id, msg="", img_url="", img_tuple=None):
+    def _payload():
+        payload = {
+            "params": {"access_token": config['FB_TOKEN']}
         }
+        if msg or img_url:
+            payload['headers'] = {"Content-Type": "application/json"}
+            payload['data'] = json.dumps({
+                "recipient": {"id": recipient_id},
+                "message": {"text": msg_seg} if msg_seg else {
+                    'attachment': {'type': 'image', 'payload': {'url': img_url}}}
+            })
+        else:
+            payload['files'] = {'filedata': img_tuple}
+            payload['data'] = {
+                "recipient": json.dumps({"id": recipient_id}),
+                "message": json.dumps({'attachment': {'type': 'image', 'payload': {}}})
+            }
+        return payload
 
-        r = requests.post("https://graph.facebook.com/v2.6/me/messages", **msg_request)
+    def _send():
+        r = requests.post("https://graph.facebook.com/v2.6/me/messages", **_payload())
+        log.info(u"reply sent: {0}:{1}:{2}".format(r.status_code, r.text, img_url))
         if r.status_code != 200:
             log.debug("send message failed: {0}".format(r.status_code))
 
