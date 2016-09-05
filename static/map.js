@@ -42,7 +42,7 @@ function pad(num, size) {
 document.getElementById('pokemon-checkbox').checked = getFromStorage("displayPokemons", "true");
 document.getElementById('gyms-checkbox').checked = getFromStorage("displayGyms", "true");
 document.getElementById('coverage-checkbox').checked = getFromStorage("displayCoverage", "true");
-document.getElementById('pokestops-checkbox').checked = getFromStorage("displayPokestops", true);
+document.getElementById('pokestops-checkbox').checked = getFromStorage("displayPokestops", false);
 
 
 $.getJSON("locale").done(function(data) {
