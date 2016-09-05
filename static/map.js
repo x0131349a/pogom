@@ -276,13 +276,13 @@ function gymLabel(team_name, team_id, gym_points) {
     return str;
 }
 
-function pokestopLabel(pokestop_id, lure_expiration) {
+function pokestopLabel(pokestop_id, lure_expiration, last_modified) {
     var label = "Pokestop"
 
     label += "<br>" + pokestop_id;
     if (lure_expiration != null) {
-        var lure_ends = new Date(lure_expiration)
-        label += "<br>Lure ends at " + pad(lure_ends.getHours()) + ":" + pad(lure_ends.getMinutes()) + ":" + pad(lure_ends.getSeconds());
+        var lure_ends = new Date(last_modified + 30 * 60 * 1000);
+        label += "<br>Lure module ends at " + pad(lure_ends.getHours()) + ":" + pad(lure_ends.getMinutes()) + ":" + pad(lure_ends.getSeconds());
     }
     return label;
 }
@@ -334,10 +334,10 @@ function setupPokestopMarker(item) {
     var label = null;
     var pic = null;
     if (!item.isLured) {
-        label = pokestopLabel(item.pokestop_id, null);
+        label = pokestopLabel(item.pokestop_id, null, null);
         pic = 'static/forts/Pstop.png';
     } else {
-        label = pokestopLabel(item.pokestop_id, item.lure_expiration);
+        label = pokestopLabel(item.pokestop_id, item.lure_expiration, item.last_modified);
         pic = 'static/forts/PstopLured.png';
     }
 
@@ -562,7 +562,7 @@ function updateMap() {
             
             var lured = false;
             if (item.lure_expiration != null) {
-                lured = item.lure_expiration > new Date().getTime();
+                lured = item.last_modified + 30 * 60 * 1000 > new Date().getTime();
             }
 
             if (!(item.pokestop_id in map_pokestops)) {
