@@ -10,10 +10,11 @@ import os
 from threading import Thread
 
 from pogom import config
-from pogom.app import Pogom
+from pogom.app_fb import PogomFb
 from pogom.models import create_tables
 from pogom.scan import Scanner, ScanConfig
 from pogom.utils import get_args, get_encryption_lib_path
+from pogom.pokeller import PokePoller
 
 log = logging.getLogger(__name__)
 
@@ -35,6 +36,7 @@ def read_config(scan_config):
     config['GOOGLEMAPS_KEY'] = c.get('GOOGLEMAPS_KEY', None)
     config['CONFIG_PASSWORD'] = c.get('CONFIG_PASSWORD', None)
     config['ACCOUNTS'] = c.get('ACCOUNTS', [])
+    config['FB_SUBSCRIBERS'] = c.get('FB_SUBSCRIBERS', None)
     scan_config.update_scan_locations(c.get('SCAN_LOCATIONS', {}))
 
     if config.get('CONFIG_PASSWORD', None):
@@ -72,6 +74,10 @@ if __name__ == '__main__':
     scanner = Scanner(scan_config)
     scanner.start()
 
-    app = Pogom(scan_config, __name__)
+    app = PogomFb(scan_config, __name__)
+    pokeller = PokePoller()
+    pokeller.set_callback(app.notify)
+    pokeller.start()
+
     config['ROOT_PATH'] = app.root_path
     app.run(threaded=True, debug=args.debug, host=args.host, port=args.port)

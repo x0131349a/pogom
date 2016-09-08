@@ -70,7 +70,7 @@ class Pogom(Flask):
             return resp
 
     def heatmap_data(self):
-        return jsonify( Pokemon.get_heat_stats() )
+        return jsonify(Pokemon.get_heat_stats())
 
     def get_config_site(self):
         if not self.is_authenticated():
@@ -141,12 +141,14 @@ class Pogom(Flask):
         else:
             config_path = os.path.join(config['ROOT_PATH'], 'config.json')
 
+        data = json.load(open(config_path, 'r'))
         with open(config_path, 'w') as f:
-            data = {'GOOGLEMAPS_KEY': config['GOOGLEMAPS_KEY'],
-                    'LOCALE': config['LOCALE'],
-                    'CONFIG_PASSWORD': config['CONFIG_PASSWORD'],
-                    'SCAN_LOCATIONS': self.scan_config.SCAN_LOCATIONS.values(),
-                    'ACCOUNTS': config['ACCOUNTS']}
+            data.update({
+                'GOOGLEMAPS_KEY': config['GOOGLEMAPS_KEY'],
+                'LOCALE': config['LOCALE'],
+                'CONFIG_PASSWORD': config['CONFIG_PASSWORD'],
+                'SCAN_LOCATIONS': self.scan_config.SCAN_LOCATIONS.values(),
+                'ACCOUNTS': config['ACCOUNTS']})
             f.write(json.dumps(data))
 
     def map_data(self):
@@ -231,8 +233,7 @@ class CustomJSONEncoder(JSONEncoder):
                 if obj.utcoffset() is not None:
                     obj = obj - obj.utcoffset()
                 millis = int(
-                        calendar.timegm(obj.timetuple()) * 1000 +
-                        obj.microsecond / 1000
+                    calendar.timegm(obj.timetuple()) * 1000 + obj.microsecond / 1000
                 )
                 return millis
             iterable = iter(obj)
