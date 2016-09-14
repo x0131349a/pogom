@@ -138,10 +138,11 @@ class Pogom(Flask):
         if (config['CONFIG_PATH'] is not None and
                 os.path.isfile(config['CONFIG_PATH'])):
             config_path = config['CONFIG_PATH']
+            data = json.load(open(config_path, 'r'))
         else:
             config_path = os.path.join(config['ROOT_PATH'], 'config.json')
+            data = {}
 
-        data = json.load(open(config_path, 'r'))
         with open(config_path, 'w') as f:
             data.update({
                 'GOOGLEMAPS_KEY': config['GOOGLEMAPS_KEY'],
