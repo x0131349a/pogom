@@ -32,6 +32,7 @@ class Pogom(Flask):
         self.route('/', methods=['GET'])(self.fullmap)
         self.route('/heatmap-data', methods=['GET'])(self.heatmap_data)
         self.route('/map-data', methods=['GET'])(self.map_data)
+        self.route('/spawnpoint-data', methods=['GET'])(self.spawnpoint_data)
         self.route('/cover', methods=['GET'])(self.cover)
         self.route('/location', methods=['POST'])(self.add_location)
         self.route('/location', methods=['DELETE'])(self.delete_location)
@@ -68,6 +69,9 @@ class Pogom(Flask):
             resp = make_response(redirect(url_for('get_config_site')))
             resp.set_cookie('auth', config['AUTH_KEY'])
             return resp
+
+    def spawnpoint_data(self):
+        return jsonify(Pokemon.get_spawn_points())
 
     def heatmap_data(self):
         return jsonify( Pokemon.get_heat_stats() )

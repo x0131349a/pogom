@@ -8,6 +8,7 @@ from peewee import Model, SqliteDatabase, InsertQuery, IntegerField, \
     CharField, FloatField, BooleanField, DateTimeField, fn, SQL
 from datetime import datetime
 from base64 import b64encode
+from collections import Counter
 import threading
 
 from .utils import get_pokemon_name, get_args
@@ -97,6 +98,22 @@ class Pokemon(BaseModel):
             p['pokemon_name'] = get_pokemon_name(p['pokemon_id'])
 
         return pokemons
+
+    @classmethod
+    def get_spawn_points(cls):
+        query = (Pokemon
+                 .select(Pokemon.spawnpoint_id, Pokemon.latitude, Pokemon.longitude, fn.group_concat(Pokemon.pokemon_id).coerce(False).alias('pokemon_history'))
+                 .group_by(Pokemon.spawnpoint_id, Pokemon.latitude, Pokemon.longitude)
+                 .dicts())
+
+        pokemons = list(query)
+        for p in pokemons:
+            p['pokemon_history'] = {
+                get_pokemon_name(k): v
+                for k, v in Counter(p['pokemon_history'].split(',')).iteritems()
+            }
+        return pokemons
+
 
 class Pokestop(BaseModel):
     pokestop_id = CharField(primary_key=True)
