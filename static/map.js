@@ -42,6 +42,7 @@ function pad(num, size) {
 document.getElementById('pokemon-checkbox').checked = getFromStorage("displayPokemons", "true");
 document.getElementById('gyms-checkbox').checked = getFromStorage("displayGyms", "true");
 document.getElementById('coverage-checkbox').checked = getFromStorage("displayCoverage", "true");
+document.getElementById('spawnpoints-checkbox').checked = getFromStorage("displaySpawnPoints", "false");
 
 
 $.getJSON("locale").done(function(data) {
@@ -147,6 +148,25 @@ function updateHeatMap() {
     });
 }
 
+function updateSpawnPoints() {
+    $.ajax({
+        url: "spawnpoint-data",
+        type: 'GET',
+        dataType: "json"
+    }).done(function(spawnpoints) {
+        if (!document.getElementById('spawnpoints-checkbox').checked) {
+          return false;
+        }
+        $.each(spawnpoints, function(i, item){
+            if (!(item.spawnpoint_id in map_spawnpoints)) {
+              if (item.marker) item.marker.setMap(null);
+              item.marker = setupSpawnPointMarker(item);
+              map_spawnpoints[item.spawnpoint_id] = item;
+            }
+        });
+    });
+}
+
 function initMap() {
     var initLat = 40.782850;  // NYC Central Park
     var initLng = -73.965288;
@@ -168,6 +188,7 @@ function initMap() {
     updateScanLocations(initialScanLocations);
     updateMap();
     updateHeatMap();
+    updateSpawnPoints();
 
     if(is_logged_in()) {
         // on click listener for
@@ -275,10 +296,19 @@ function gymLabel(team_name, team_id, gym_points) {
     return str;
 }
 
+function spawnpointLabel(spawn_history) {
+    var label = "<div>"
+    for (var pokemon_name in spawn_history) {
+        label += pokemon_name + ": "+ spawn_history[pokemon_name] + "<br>"
+    }
+    label += "</div>"
+    return label;
+}
 
 var map_pokemons = {}; // dict containing all pokemons on the map.
 var map_gyms = {};
 var gym_types = [ "Uncontested", "Mystic", "Valor", "Instinct" ];
+var map_spawnpoints = {};
 
 function setupPokemonMarker(item) {
     var myIcon = new google.maps.MarkerImage('static/icons/'+item.pokemon_id+'.png', null, null, null, new google.maps.Size(30,30));
@@ -316,6 +346,24 @@ function setupGymMarker(item) {
     addListeners(marker);
     return marker;
 }
+
+function setupSpawnPointMarker(item) {
+    var myIcon = new google.maps.MarkerImage('static/favicon.ico', null, null, null, new google.maps.Size(8,8));
+    var marker = new google.maps.Marker({
+        position: {lat: item.latitude, lng: item.longitude},
+        map: map,
+        icon: myIcon
+    });
+    marker.infoWindow = new google.maps.InfoWindow({
+        content: spawnpointLabel(item.pokemon_history),
+        disableAutoPan: true
+    });
+
+
+    addListeners(marker);
+    return marker;
+}
+
 
 function addListeners(marker){
     marker.addListener('click', function() {
@@ -482,7 +530,7 @@ function updateMap() {
                 item.marker = setupPokemonMarker(item);
                 map_pokemons[item.encounter_id] = item;
                 notify(item);
-            } else if (item.encounter_id in map_pokemons  && 
+            } else if (item.encounter_id in map_pokemons  &&
                     map_pokemons[item.encounter_id].disappear_time != item.disappear_time) {
                 //update label
                 map_pokemons[item.encounter_id].disappear_time = item.disappear_time;
@@ -558,6 +606,18 @@ $('#coverage-checkbox').change(function() {
     scanLocations.forEach(function (scanLocation, key) {
         scanLocation.marker.setVisible(this.checked);
     }, this);
+});
+
+$('#spawnpoints-checkbox').change(function() {
+    localStorage.displaySpawnPoints = this.checked;
+    if(this.checked) {
+        updateSpawnPoints();
+    } else {
+        $.each(map_spawnpoints, function(key, value) {
+            map_spawnpoints[key].marker.setMap(null);
+        });
+        map_spawnpoints = {}
+    }
 });
 
 
