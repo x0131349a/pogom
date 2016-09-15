@@ -102,7 +102,7 @@ class Pokemon(BaseModel):
     @classmethod
     def get_spawn_points(cls):
         query = (Pokemon
-                 .select(Pokemon.spawnpoint_id, Pokemon.latitude, Pokemon.longitude, fn.group_concat(Pokemon.pokemon_id).coerce(False).alias('pokemon_history'))
+                 .select(Pokemon.spawnpoint_id, Pokemon.latitude, Pokemon.longitude, fn.MAX(Pokemon.disappear_time).alias('lastseen'), fn.group_concat(Pokemon.pokemon_id).coerce(False).alias('pokemon_history'))
                  .group_by(Pokemon.spawnpoint_id, Pokemon.latitude, Pokemon.longitude)
                  .dicts())
 

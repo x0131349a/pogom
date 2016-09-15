@@ -42,7 +42,7 @@ function pad(num, size) {
 document.getElementById('pokemon-checkbox').checked = getFromStorage("displayPokemons", "true");
 document.getElementById('gyms-checkbox').checked = getFromStorage("displayGyms", "true");
 document.getElementById('coverage-checkbox').checked = getFromStorage("displayCoverage", "true");
-document.getElementById('spawnpoints-checkbox').checked = getFromStorage("displaySpawnPoints", "false");
+document.getElementById('spawnpoints-checkbox').checked = getFromStorage("displaySpawnPoints", false);
 
 
 $.getJSON("locale").done(function(data) {
@@ -152,6 +152,7 @@ function updateSpawnPoints() {
     $.ajax({
         url: "spawnpoint-data",
         type: 'GET',
+        data: {'range': '21'},
         dataType: "json"
     }).done(function(spawnpoints) {
         if (!document.getElementById('spawnpoints-checkbox').checked) {
