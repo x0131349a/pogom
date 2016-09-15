@@ -71,7 +71,21 @@ class Pogom(Flask):
             return resp
 
     def spawnpoint_data(self):
-        return jsonify(Pokemon.get_spawn_points())
+        pokemon_spawns = Pokemon.get_spawn_points()
+        filter_range = request.args.get('range', None)
+        if filter_range:
+            # in day
+            filter_range = int(filter_range)
+            after_timestamp = time.time() - filter_range * 86400
+            pokemon_spawns = filter(
+                lambda p: (p['lastseen'] - datetime(1970, 1, 1)).total_seconds() > after_timestamp,
+                pokemon_spawns
+            )
+        # remove time data for a smaller json
+        for p in pokemon_spawns:
+            p.pop('lastseen')
+
+        return jsonify(pokemon_spawns)
 
     def heatmap_data(self):
         return jsonify( Pokemon.get_heat_stats() )
