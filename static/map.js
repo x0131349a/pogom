@@ -202,7 +202,7 @@ function initMap() {
                 map: map
             });
             newLocationMarker.infoWindow = new google.maps.InfoWindow({
-                content: "<button id=\"new-loc-btn\">Add new Location</button><input style=\"width: 75px;\" id=\"new-loc-radius\" type=\"number\" placeholder=\"Radius (meters)\">",
+                content: "<button id=\"new-loc-btn\">Add new Location</button><input style=\"width: 75px;\" id=\"new-loc-radius\" type=\"number\" value=\"100\">",
                 disableAutoPan: true
             });
             newLocationMarker.infoWindow.open(map, newLocationMarker);
