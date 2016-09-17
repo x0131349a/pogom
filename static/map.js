@@ -180,7 +180,7 @@ function initMap() {
                 map: map
             });
             newLocationMarker.infoWindow = new google.maps.InfoWindow({
-                content: "<button id=\"new-loc-btn\">Add new Location</button><input style=\"width: 75px;\" id=\"new-loc-radius\" type=\"number\" placeholder=\"Radius (meters)\">",
+                content: "<button id=\"new-loc-btn\">Add new Location</button><input style=\"width: 75px;\" id=\"new-loc-radius\" type=\"number\" value=\"100\">",
                 disableAutoPan: true
             });
             newLocationMarker.infoWindow.open(map, newLocationMarker);
@@ -482,7 +482,7 @@ function updateMap() {
                 item.marker = setupPokemonMarker(item);
                 map_pokemons[item.encounter_id] = item;
                 notify(item);
-            } else if (item.encounter_id in map_pokemons  && 
+            } else if (item.encounter_id in map_pokemons  &&
                     map_pokemons[item.encounter_id].disappear_time != item.disappear_time) {
                 //update label
                 map_pokemons[item.encounter_id].disappear_time = item.disappear_time;

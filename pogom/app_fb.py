@@ -165,7 +165,7 @@ class PogomFb(Pogom):
 
     def _move_subscriber_location(self, s_id, lat, lng):
         self._del_subscriber_location(s_id)
-        self._add_map_location(lat, lng, 200)
+        self._add_map_location(lat, lng, 250)
         self._fb_subscribers[s_id]['recon'] = (lat, lng)
         self._save_subscriber()
 
