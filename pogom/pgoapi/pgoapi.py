@@ -51,7 +51,7 @@ class PGoApi:
         self.set_logger()
 
         self._signature_lib_path = signature_lib_path
-        self._work_queue = Queue()
+        self._work_queue = PriorityQueue()
         self._auth_queue = PriorityQueue()
         self._workers = []
         self._api_endpoint = 'https://pgorelease.nianticlabs.com/plfe/rpc'
@@ -126,6 +126,9 @@ class PGoApi:
 
             position = kwargs.pop('position')
             callback = kwargs.pop('callback')
+            # 0 for higher priority, 10 for default priority
+            # this priority would be used to calculate next_call time
+            priority = kwargs.pop('priority') if 'priority' in kwargs else 10.0
 
             if kwargs:
                 method = {RequestType.Value(name): kwargs}
@@ -136,15 +139,15 @@ class PGoApi:
                 method = RequestType.Value(name)
                 self.log.debug("Adding '%s' to RPC request", name)
 
-            self.call_method(method, position, callback)
+            self.call_method(method, position, callback, priority)
 
         if func.upper() in RequestType.keys():
             return function
         else:
             raise AttributeError
 
-    def call_method(self, method, position, callback):
-        self._work_queue.put((method, position, callback))
+    def call_method(self, method, position, callback, priority=10.0):
+        self._work_queue.put((priority, method, position, callback))
 
     def empty_work_queue(self):
         while not self._work_queue.empty():
@@ -196,16 +199,16 @@ class PGoApiWorker(Thread):
 
     def run(self):
         while self._running:
-            method, position, callback = self._work_queue.get()
+            priority, method, position, callback = self._work_queue.get()
             if not self._running:
-                self._work_queue.put((method, position, callback))
+                self._work_queue.put((priority, method, position, callback))
                 self._work_queue.task_done()
                 continue
 
             next_call, auth_provider = self._get_auth_provider()
             if not self._running:
                 self._auth_queue.put((next_call, auth_provider))
-                self._work_queue.put((method, position, callback))
+                self._work_queue.put((priority, method, position, callback))
                 self._work_queue.task_done()
                 continue
 
@@ -213,7 +216,7 @@ class PGoApiWorker(Thread):
             self.rpc_api._auth_provider = auth_provider
             try:
                 response = self.call(auth_provider, [method], position)
-                next_call = time.time() + self.THROTTLE_TIME
+                next_call = time.time() + priority
             except Exception as e:
                 # Too many login retries lead to an AuthException
                 # So let us sideline this auth provider for 5 minutes
@@ -224,7 +227,7 @@ class PGoApiWorker(Thread):
                     self.log.error("Error in worker thread. Returning empty response. Error: {}".format(e))
                     next_call = time.time() + self.THROTTLE_TIME
 
-                self._work_queue.put((method, position, callback))
+                self._work_queue.put((priority, method, position, callback))
                 response = {}
 
             self._work_queue.task_done()
@@ -282,7 +285,7 @@ class PGoApiWorker(Thread):
                 else:
                     again = False
                     auth_provider.code_three_counter = 0
-                    
+
                 if auth_provider.code_three_counter > 1:
                     self.log.info("Received two consecutive status_code 3 on account {}, probably banned.".format(auth_provider.username))
 
