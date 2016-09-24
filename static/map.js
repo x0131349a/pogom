@@ -222,9 +222,19 @@ function initGeoLocation() {
     }
 }
 
-function pokemonLabel(name, id, disappear_time, latitude, longitude) {
+function pokemonLabel(name, id, disappear_time, latitude, longitude, attack, defense, stamina, move_1, move_2, spawnpoint_id) {
     var disappear_date = new Date(disappear_time);
-
+    var ivValue;
+    if (!attack && !defense && !stamina) {
+      ivValue ="null"
+    } else {
+      ivValue = Math.round((attack+defense+stamina)/45*100);
+    }
+    attack = attack || "null";
+    defense = defense || "null";
+    stamina = stamina || "null";
+    move_1 = move_1 || "null";
+    move_2 = move_2 || "null";
     var label = "<div>\
             <b>" +name+ "</b>\
             <span> - </span>\
@@ -241,6 +251,10 @@ function pokemonLabel(name, id, disappear_time, latitude, longitude) {
             <a href='#' onclick='removePokemon(\"" + id + "\")')>Hide " + name + "s</a>\
             <a href='#' onclick='addToNotify(\"" + id + "\")')>Notify</a>\
         </div>";
+
+    label += "<div><b>IV:"+ivValue+"</b> 攻:"+attack+" / 防:"+defense+" / 體:"+stamina+"</div>"+
+             "<div>招1:"+move_1+" / 招2:"+move_2+"</div>";
+
     return label;
 };
 
@@ -482,11 +496,11 @@ function updateMap() {
                 item.marker = setupPokemonMarker(item);
                 map_pokemons[item.encounter_id] = item;
                 notify(item);
-            } else if (item.encounter_id in map_pokemons  && 
+            } else if (item.encounter_id in map_pokemons  &&
                     map_pokemons[item.encounter_id].disappear_time != item.disappear_time) {
                 //update label
                 map_pokemons[item.encounter_id].disappear_time = item.disappear_time;
-                var label = pokemonLabel(item.pokemon_name, item.pokemon_id, item.disappear_time, item.latitude, item.longitude);
+                var label = pokemonLabel(item.pokemon_name, item.pokemon_id, item.disappear_time, item.latitude, item.longitude, item.individual_attack, item.individual_defense, item.individual_stamina, item.move_1, item.move_2, item.spawnpoint_id);
                 map_pokemons[item.encounter_id].marker.infoWindow.setContent(label);
             }
         });
