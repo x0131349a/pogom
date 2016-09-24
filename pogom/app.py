@@ -82,7 +82,8 @@ class Pogom(Flask):
             locales_available=config.get('LOCALES_AVAILABLE', []),
             gmaps_key=config.get('GOOGLEMAPS_KEY', None),
             accounts=config.get('ACCOUNTS', []),
-            password=config.get('CONFIG_PASSWORD', None))
+            password=config.get('CONFIG_PASSWORD', None),
+            detail_pokemons=','.join(map(str, self.scan_config.DETAIL_POKEMON_LIST)))
 
     def post_config_site(self):
         if not self.is_authenticated():
@@ -114,6 +115,9 @@ class Pogom(Flask):
 
         config['ACCOUNTS'] = accounts_parsed
         self.scan_config.ACCOUNTS_CHANGED = (usernames_before != usernames)
+
+        pokemon_checklist = request.form.get('detailPokemonIds', '')
+        self.scan_config.update_pokemon_list_to_query(map(int, pokemon_checklist.split(',')))
         self.save_config()
 
         self.scan_config.RESTART = True
@@ -146,7 +150,8 @@ class Pogom(Flask):
                     'LOCALE': config['LOCALE'],
                     'CONFIG_PASSWORD': config['CONFIG_PASSWORD'],
                     'SCAN_LOCATIONS': self.scan_config.SCAN_LOCATIONS.values(),
-                    'ACCOUNTS': config['ACCOUNTS']}
+                    'ACCOUNTS': config['ACCOUNTS'],
+                    'DETAIL_POKEMON_LIST': self.scan_config.DETAIL_POKEMON_LIST}
             f.write(json.dumps(data))
 
     def map_data(self):
