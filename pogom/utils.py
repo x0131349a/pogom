@@ -37,6 +37,10 @@ def get_pokemon_name(pokemon_id):
     return get_locale()[str(pokemon_id)]
 
 
+def get_move_name(move_id):
+    return get_locale('moves')[str(move_id)]
+
+
 def get_pokemon_id(pokemon_name):
     if not hasattr(get_pokemon_id, 'inv'):
         get_pokemon_id.inv = {v: k for k, v in get_locale().iteritems()}
@@ -47,18 +51,26 @@ def get_pokemon_names():
     return [get_pokemon_name(n) for n in xrange(1, 152)]
 
 
-def get_locale():
-    if (not hasattr(get_locale, 'names') or
-       config['LOCALE'] != get_locale.locale):
+def get_locale(property_name='names'):
+    '''
+    names, moves
+    '''
+    if (not hasattr(get_locale, 'locale') or config['LOCALE'] != get_locale.locale):
         get_locale.locale = config['LOCALE']
-        file_path = os.path.join(
-            config['ROOT_PATH'],
-            config['LOCALES_DIR'],
-            'pokemon.{}.json'.format(config['LOCALE']))
-        with open(file_path, 'r') as f:
-            get_locale.names = json.loads(f.read())
+        file_root = os.path.join(config['ROOT_PATH'], config['LOCALES_DIR'])
+        if (not hasattr(get_locale, 'names')):
+            file_path = os.path.join(file_root, 'pokemon.{}.json'.format(config['LOCALE']))
+            with open(file_path, 'r') as f:
+                get_locale.names = json.loads(f.read())
 
-    return get_locale.names
+        if (not hasattr(get_locale, 'moves')):
+            file_path = os.path.join(file_root, 'moves.{}.json'.format(config['LOCALE']))
+            if not os.path.isfile(file_path):
+                file_path = os.path.join(file_root, 'moves.en.json')
+            with open(file_path, 'r') as f:
+                get_locale.moves = json.loads(f.read())
+
+    return getattr(get_locale, property_name)
 
 
 def get_encryption_lib_path():

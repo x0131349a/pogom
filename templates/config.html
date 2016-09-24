@@ -43,6 +43,10 @@ username2:password2">
 {% endfor %}</textarea>
 			</div>
 			<div class="form-group">
+				<label for="detailPokemonIds">Pokemon IDs you want to know more!</label>
+				<input class="form-control" id="detailPokemonIds" name="detailPokemonIds" placeholder="150,151" value="{{ detail_pokemons }}">
+			</div>
+			<div class="form-group">
 				<label for="configPassword">Config Password</label>
 				<input type="password" class="form-control" id="configPassword" name="configPassword" value="{{ password or ''}}">
 				<span id="configPasswordHelp" class="help-block">Protect this config with a password.</span>

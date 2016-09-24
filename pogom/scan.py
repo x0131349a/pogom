@@ -12,13 +12,14 @@ import random
 from datetime import datetime
 from itertools import izip, count
 from threading import Thread
+from functools import partial
 
 from pgoapi import PGoApi
 from pgoapi.utilities import f2i, get_cell_ids, get_pos_by_name
 from sys import maxint
 from geographiclib.geodesic import Geodesic
 
-from .models import parse_map
+from .models import parse_map, parse_encounter, save_encounter
 from . import config
 
 log = logging.getLogger(__name__)
@@ -37,6 +38,7 @@ class ScanMetrics:
 
 
 class Scanner(Thread):
+
     def __init__(self, scan_config):
         Thread.__init__(self)
         self.daemon = True
@@ -49,15 +51,37 @@ class Scanner(Thread):
         for point in self.scan_config.COVER:
             yield (point["lat"], point["lng"], 0)
 
-    @staticmethod
-    def callback(response_dict):
+    def callback_encounter(self, response_dict, pokemon_dict):
+        if (not response_dict) or ('responses' in response_dict and not response_dict['responses']):
+            log.info('Encounter Fetch Failed. Skip...')
+            save_encounter(pokemon_dict)
+            return
+        try:
+            parse_encounter(response_dict, pokemon_dict)
+        except Exception as e:  # dont crash plz
+            log.error(e)
+            log.error('Unexpected error while parsing encounter.')
+            log.error('Response dict: {}'.format(response_dict))
+
+    def callback(self, response_dict):
         if (not response_dict) or ('responses' in response_dict and not response_dict['responses']):
             log.info('Map Download failed. Trying again.')
             ScanMetrics.CONSECUTIVE_MAP_FAILS += 1
             return
 
         try:
-            parse_map(response_dict)
+            pokemons_need_detail = parse_map(response_dict, self.scan_config.DETAIL_POKEMON_LIST)
+            for e_id, p_detail in pokemons_need_detail.iteritems():
+                self.api.encounter(
+                    encounter_id=e_id,
+                    spawn_point_id=p_detail['spawnpoint_id'],
+                    player_latitude=f2i(p_detail['latitude']),
+                    player_longitude=f2i(p_detail['longitude']),
+                    position=(p_detail['latitude'], p_detail['longitude'], 0),
+                    callback=partial(self.callback_encounter, pokemon_dict=p_detail),
+                    priority=2.0
+                )
+
             ScanMetrics.LAST_SUCCESSFUL_REQUEST = time.time()
             ScanMetrics.CONSECUTIVE_MAP_FAILS = 0
             log.debug("Parsed & saved.")
@@ -92,7 +116,7 @@ class Scanner(Thread):
                 cell_id=cell_ids,
                 since_timestamp_ms=timestamps,
                 position=next_pos,
-                callback=Scanner.callback)
+                callback=self.callback)
 
         while not self.api.is_work_queue_empty():
             # Location change
@@ -133,6 +157,8 @@ class ScanConfig(object):
 
     RESTART = True  # Triggered when the setup is changed due to user input
     ACCOUNTS_CHANGED = True
+
+    DETAIL_POKEMON_LIST = []
 
     def update_scan_locations(self, scan_locations):
         location_names = set([])
@@ -176,6 +202,9 @@ class ScanConfig(object):
                 del self.SCAN_LOCATIONS[k]
                 self._update_cover()
                 return
+
+    def update_pokemon_list_to_query(self, new_list):
+        self.DETAIL_POKEMON_LIST = new_list
 
     def _update_cover(self):
         cover = []

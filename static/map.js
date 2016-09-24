@@ -244,9 +244,27 @@ function initGeoLocation() {
     }
 }
 
-function pokemonLabel(name, id, disappear_time, latitude, longitude) {
-    var disappear_date = new Date(disappear_time);
+function checkUndefined(para){
+  if (para === undefined) {
+    return "null";
+  } else {
+    return para;
+  }
+}
 
+function pokemonLabel(name, id, disappear_time, latitude, longitude, attack, defense, stamina, move_1, move_2) {
+    var disappear_date = new Date(disappear_time);
+    var ivValue;
+    if (!attack && !defense && !stamina) {
+      ivValue ="null";
+    } else {
+      ivValue = Math.round((attack+defense+stamina)/45*100);
+    }
+    attack = checkUndefined(attack);
+    defense = checkUndefined(defense);
+    stamina = checkUndefined(stamina);
+    move_1 = checkUndefined(move_1);
+    move_2 = checkUndefined(move_2);
     var label = "<div>\
             <b>" +name+ "</b>\
             <span> - </span>\
@@ -263,6 +281,10 @@ function pokemonLabel(name, id, disappear_time, latitude, longitude) {
             <a href='#' onclick='removePokemon(\"" + id + "\")')>Hide " + name + "s</a>\
             <a href='#' onclick='addToNotify(\"" + id + "\")')>Notify</a>\
         </div>";
+    if (!(attack==="null"&&defense==="null"&&stamina==="null"&&move_1==="null"&&move_2==="null")) {
+        label += "<div><b>IV:"+ivValue+"</b> 攻:"+attack+" / 防:"+defense+" / 體:"+stamina+"</div>"+
+                 "<div>招1:"+move_1+" / 招2:"+move_2+"</div>";
+    }
     return label;
 };
 
@@ -320,7 +342,7 @@ function setupPokemonMarker(item) {
         icon: myIcon
     });
 
-    var label = pokemonLabel(item.pokemon_name, item.pokemon_id, item.disappear_time, item.latitude, item.longitude);
+    var label = pokemonLabel(item.pokemon_name, item.pokemon_id, item.disappear_time, item.latitude, item.longitude, item.individual_attack, item.individual_defense, item.individual_stamina, item.move_1, item.move_2);
 
     marker.infoWindow = new google.maps.InfoWindow({
         content: label,
@@ -535,7 +557,7 @@ function updateMap() {
                     map_pokemons[item.encounter_id].disappear_time != item.disappear_time) {
                 //update label
                 map_pokemons[item.encounter_id].disappear_time = item.disappear_time;
-                var label = pokemonLabel(item.pokemon_name, item.pokemon_id, item.disappear_time, item.latitude, item.longitude);
+                var label = pokemonLabel(item.pokemon_name, item.pokemon_id, item.disappear_time, item.latitude, item.longitude, item.individual_attack, item.individual_defense, item.individual_stamina, item.move_1, item.move_2);
                 map_pokemons[item.encounter_id].marker.infoWindow.setContent(label);
             }
         });
