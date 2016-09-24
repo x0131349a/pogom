@@ -2,7 +2,7 @@
 from __future__ import division
 from . import config
 from .app import Pogom
-from .utils import get_pokemon_id, get_pokemon_names, get_pokemon_name, get_move_name
+from .utils import get_pokemon_id, get_pokemon_names, get_pokemon_name
 from flask import request
 from pytz import timezone
 from datetime import datetime
@@ -99,21 +99,20 @@ class PogomFb(Pogom):
                     u"野生的 {pokemon_name} 出現了!",
                     u"消失於: {ctime}"
                 ]
-                move_1, move_2 = m.get('move_1', ''), m.get('move_1', '')
+                move_1, move_2 = m.get('move_1', ''), m.get('move_2', '')
                 atk, dfn, sta = (
                     m.get('individual_attack', 0),
                     m.get('individual_defense', 0),
                     m.get('individual_stamina', 0)
                 )
                 if all((move_1, move_2)):
-                    msg.append('{m1}/{m2}'.format(
-                        m1=get_move_name(move_1),
-                        m2=get_move_name(move_2))
-                    )
+                    msg.append(u'{m1}/{m2}'.format(
+                        m1=move_1, m2=move_2
+                    ))
                 if any((atk, dfn, sta)):
                     iv = 100 * (atk + dfn + sta) / 45.0
-                    msg.append('IV: {iv:0.2f}%'.format(iv=iv))
-                    msg.append('攻: {atk}, 防: {dfn}, 耐: {sta}'.format(atk=atk, dfn=dfn, sta=sta))
+                    msg.append(u'IV: {iv:0.2f}%'.format(iv=iv))
+                    msg.append(u'攻: {atk}, 防: {dfn}, 耐: {sta}'.format(atk=atk, dfn=dfn, sta=sta))
                 msg = u"\n".join(msg)
                 msg = msg.format(
                     pokemon_name=m['pokemon_name'],
