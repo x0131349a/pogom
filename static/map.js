@@ -234,7 +234,7 @@ function pokemonLabel(name, id, disappear_time, latitude, longitude, attack, def
     var disappear_date = new Date(disappear_time);
     var ivValue;
     if (!attack && !defense && !stamina) {
-      ivValue ="null"
+      ivValue ="null";
     } else {
       ivValue = Math.round((attack+defense+stamina)/45*100);
     }
@@ -259,10 +259,10 @@ function pokemonLabel(name, id, disappear_time, latitude, longitude, attack, def
             <a href='#' onclick='removePokemon(\"" + id + "\")')>Hide " + name + "s</a>\
             <a href='#' onclick='addToNotify(\"" + id + "\")')>Notify</a>\
         </div>";
-
-    label += "<div><b>IV:"+ivValue+"</b> 攻:"+attack+" / 防:"+defense+" / 體:"+stamina+"</div>"+
-             "<div>招1:"+move_1+" / 招2:"+move_2+"</div>";
-
+    if (!(attack==="null"&&defense==="null"&&stamina==="null"&&move_1==="null"&&move_2==="null")) {
+        label += "<div><b>IV:"+ivValue+"</b> 攻:"+attack+" / 防:"+defense+" / 體:"+stamina+"</div>"+
+                 "<div>招1:"+move_1+" / 招2:"+move_2+"</div>";
+    }
     return label;
 };
 
