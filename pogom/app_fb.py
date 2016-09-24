@@ -95,10 +95,24 @@ class PogomFb(Pogom):
                 exp_ctime = "{h:0>2}:{m:0>2}:{s:0>2}".format(
                     h=local_time.hour, m=local_time.minute,
                     s=local_time.second)
-                msg = (
+                msg = [
                     u"野生的 {pokemon_name} 出現了!",
                     u"消失於: {ctime}"
+                ]
+                move_1, move_2 = m.get('move_1', ''), m.get('move_2', '')
+                atk, dfn, sta = (
+                    m.get('individual_attack', 0),
+                    m.get('individual_defense', 0),
+                    m.get('individual_stamina', 0)
                 )
+                if all((move_1, move_2)):
+                    msg.append(u'{m1}/{m2}'.format(
+                        m1=move_1, m2=move_2
+                    ))
+                if any((atk, dfn, sta)):
+                    iv = 100 * (atk + dfn + sta) / 45.0
+                    msg.append(u'IV: {iv:0.2f}%'.format(iv=iv))
+                    msg.append(u'攻: {atk}, 防: {dfn}, 耐: {sta}'.format(atk=atk, dfn=dfn, sta=sta))
                 msg = u"\n".join(msg)
                 msg = msg.format(
                     pokemon_name=m['pokemon_name'],
