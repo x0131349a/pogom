@@ -10,7 +10,7 @@ from datetime import datetime
 from base64 import b64encode, b64decode
 import threading
 
-from .utils import get_pokemon_name, get_args
+from .utils import get_pokemon_name, get_args, get_move_name
 from playhouse.db_url import connect
 
 
@@ -66,6 +66,11 @@ class Pokemon(BaseModel):
                           'individual_defense', 'individual_stamina'):
                 if p[field] is None:
                     p.pop(field)
+            if 'move_1' in p:
+                p['move_1'] = get_move_name(p['move_1'])
+            if 'move_2' in p:
+                p['move_2'] = get_move_name(p['move_2'])
+
             p['pokemon_name'] = get_pokemon_name(p['pokemon_id'])
             pokemons.append(p)
 
