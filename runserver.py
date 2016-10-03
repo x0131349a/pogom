@@ -7,7 +7,6 @@ import json
 import random
 import string
 import os
-from threading import Thread
 
 from pogom import config
 from pogom.app import Pogom
