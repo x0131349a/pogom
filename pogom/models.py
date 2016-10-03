@@ -7,10 +7,10 @@ import math
 from peewee import Model, SqliteDatabase, InsertQuery, IntegerField, \
     CharField, FloatField, BooleanField, DateTimeField, fn, SQL
 from datetime import datetime
-from base64 import b64encode
+from base64 import b64encode, b64decode
 import threading
 
-from .utils import get_pokemon_name, get_args
+from .utils import get_pokemon_name, get_args, get_move_name
 from playhouse.db_url import connect
 
 
@@ -47,6 +47,11 @@ class Pokemon(BaseModel):
     latitude = FloatField()
     longitude = FloatField()
     disappear_time = DateTimeField()
+    move_1 = IntegerField(null=True)
+    move_2 = IntegerField(null=True)
+    individual_stamina = IntegerField(null=True)
+    individual_attack = IntegerField(null=True)
+    individual_defense = IntegerField(null=True)
 
     @classmethod
     def get_active(cls):
@@ -57,6 +62,15 @@ class Pokemon(BaseModel):
 
         pokemons = []
         for p in query:
+            for field in ('move_1', 'move_2', 'individual_attack',
+                          'individual_defense', 'individual_stamina'):
+                if p[field] is None:
+                    p.pop(field)
+            if 'move_1' in p:
+                p['move_1'] = get_move_name(p['move_1'])
+            if 'move_2' in p:
+                p['move_2'] = get_move_name(p['move_2'])
+
             p['pokemon_name'] = get_pokemon_name(p['pokemon_id'])
             pokemons.append(p)
 
@@ -98,6 +112,16 @@ class Pokemon(BaseModel):
 
         return pokemons
 
+    @classmethod
+    def get_active_encountered(cls):
+        query = (Pokemon
+                 .select(Pokemon.encounter_id)
+                 .where(Pokemon.disappear_time > datetime.utcnow())
+                 .tuples())
+
+        return tuple(query)
+
+
 class Pokestop(BaseModel):
     pokestop_id = CharField(primary_key=True)
     enabled = BooleanField()
@@ -124,7 +148,41 @@ class Gym(BaseModel):
     last_modified = DateTimeField()
 
 
-def parse_map(map_dict):
+def save_encounter(pokemon_dict):
+    '''
+    pokemon = {'whatever': {...}}
+    '''
+    if pokemon_dict:
+        if not isinstance(pokemon_dict.values()[0], dict):
+            pokemon_dict = {'anyvalue': pokemon_dict}
+
+        with db.atomic() and lock:
+            log.info("Upserting a pokemon with details")
+            bulk_upsert(Pokemon, pokemon_dict)
+
+
+def parse_encounter(encounter_dict, pokemon_basic_data):
+
+    if encounter_dict['responses']['ENCOUNTER']['status'] != 1:
+        log.warning("Received valid response but without any data at paarsing encounters.")
+        # save data from previous map parsing result
+        wild_pokemon = pokemon_basic_data
+    else:
+        wild_pokemon = encounter_dict['responses']['ENCOUNTER']['wild_pokemon']
+        wild_pokemon = {
+            'move_1': wild_pokemon['pokemon_data']['move_1'],
+            'move_2': wild_pokemon['pokemon_data']['move_2'],
+            'individual_stamina': wild_pokemon['pokemon_data'].get('individual_stamina', 0),
+            'individual_attack': wild_pokemon['pokemon_data'].get('individual_attack', 0),
+            'individual_defense': wild_pokemon['pokemon_data'].get('individual_defense', 0)
+        }
+        wild_pokemon.update(pokemon_basic_data)
+        # save successful data only
+        save_encounter({'watever': wild_pokemon})
+
+
+def parse_map(map_dict, pokemon_checklist):
+    pokemons_need_detail = {}
     pokemons = {}
     pokestops = {}
     gyms = {}
@@ -135,38 +193,44 @@ def parse_map(map_dict):
 
     for cell in cells:
         for p in cell.get('wild_pokemons', []):
-            if p['encounter_id'] in pokemons:
+            pkm = (pokemons_need_detail
+                   if p['pokemon_data']['pokemon_id'] in pokemon_checklist else
+                   pokemons)
+
+            if p['encounter_id'] in pkm:
                 continue  # prevent unnecessary parsing
 
-            pokemons[p['encounter_id']] = {
+            pkm[p['encounter_id']] = {
                 'encounter_id': b64encode(str(p['encounter_id'])),
                 'spawnpoint_id': p['spawn_point_id'],
                 'pokemon_id': p['pokemon_data']['pokemon_id'],
                 'latitude': p['latitude'],
-                'longitude': p['longitude'],
-                'disappear_time': datetime.utcfromtimestamp(
-                        (p['last_modified_timestamp_ms'] +
-                         p['time_till_hidden_ms']) / 1000.0)
+                'longitude': p['longitude']
             }
-            if p['time_till_hidden_ms'] < 0 or p['time_till_hidden_ms'] > 900000:
-                pokemons[p['encounter_id']]['disappear_time'] = datetime.utcfromtimestamp(
-                        p['last_modified_timestamp_ms']/1000 + 15*60)
+
+            pkm[p['encounter_id']]['disappear_time'] = datetime.utcfromtimestamp(
+                p['last_modified_timestamp_ms'] / 1000 + 15 * 60
+                if (p['time_till_hidden_ms'] < 0 or p['time_till_hidden_ms'] > 900000) else
+                (p['last_modified_timestamp_ms'] + p['time_till_hidden_ms']) / 1000.0
+            )
 
         for p in cell.get('catchable_pokemons', []):
-            if p['encounter_id'] in pokemons:
+            pkm = (pokemons_need_detail
+                   if p['pokemon_id'] in pokemon_checklist else
+                   pokemons)
+
+            if p['encounter_id'] in pkm:
                 continue  # prevent unnecessary parsing
 
             log.critical("found catchable pokemon not in wild: {}".format(p))
 
-            pokemons[p['encounter_id']] = {
+            pkm[p['encounter_id']] = {
                 'encounter_id': b64encode(str(p['encounter_id'])),
                 'spawnpoint_id': p['spawn_point_id'],
-                'pokemon_id': p['pokemon_data']['pokemon_id'],
+                'pokemon_id': p['pokemon_id'],
                 'latitude': p['latitude'],
                 'longitude': p['longitude'],
-                'disappear_time': datetime.utcfromtimestamp(
-                        (p['last_modified_timestamp_ms'] +
-                         p['time_till_hidden_ms']) / 1000.0)
+                'disappear_time': datetime.utcfromtimestamp(p['expiration_timestamp_ms'] / 1000.0)
             }
 
         for f in cell.get('forts', []):
@@ -204,8 +268,8 @@ def parse_map(map_dict):
                     'last_modified': datetime.utcfromtimestamp(
                             f['last_modified_timestamp_ms'] / 1000.0),
                 }
-
     with db.atomic() and lock:
+        # upsert pokemons not in checklist only
         if pokemons:
             log.info("Upserting {} pokemon".format(len(pokemons)))
             bulk_upsert(Pokemon, pokemons)
@@ -217,6 +281,14 @@ def parse_map(map_dict):
         if gyms:
             log.info("Upserting {} gyms".format(len(gyms)))
             bulk_upsert(Gym, gyms)
+
+    if pokemons_need_detail:
+        encountered = Pokemon.get_active_encountered()
+        pokemons_need_detail = {
+            k: v for k, v in pokemons_need_detail.iteritems()
+            if v['encounter_id'] not in encountered
+        }
+    return pokemons_need_detail
 
 
 def bulk_upsert(cls, data):

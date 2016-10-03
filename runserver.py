@@ -39,6 +39,7 @@ def read_config(scan_config):
     config['CONFIG_PASSWORD'] = c.get('CONFIG_PASSWORD', None)
     config['ACCOUNTS'] = c.get('ACCOUNTS', [])
     scan_config.update_scan_locations(c.get('SCAN_LOCATIONS', {}))
+    scan_config.update_pokemon_list_to_query(c.get('DETAIL_POKEMON_LIST', []))
 
     if config.get('CONFIG_PASSWORD', None):
         config['AUTH_KEY'] = ''.join(random.choice(string.lowercase) for _ in range(32))
