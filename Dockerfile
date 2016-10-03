@@ -14,6 +14,7 @@ ENTRYPOINT ["python", "./runserver.py", "-H", "0.0.0.0", "-P", "5000"]
 # Install required system packages
 RUN apk add --no-cache ca-certificates
 RUN apk add --no-cache bash git openssh
+RUN apk add --no-cache sqlite
 
 COPY requirements.txt /usr/src/app/
 
