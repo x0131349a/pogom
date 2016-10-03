@@ -25,3 +25,7 @@ RUN apk add --no-cache build-base \
 COPY static /usr/src/app/static
 
 COPY . /usr/src/app/
+
+RUN if [ -f /usr/src/data/config.json ]; then cp /usr/src/data/config.json /usr/src/app/config.json; fi
+
+RUN if [ -f /usr/src/data/pogom.db ]; then cp /usr/src/data/pogom.db /usr/src/app/pogom.db; fi
